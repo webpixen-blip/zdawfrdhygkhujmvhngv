@@ -605,11 +605,12 @@ const TvDetails = ({ tvId: tvIdProp }) => {
           
           <div className="relative z-10 bg-[#0f1117]/80 backdrop-blur-xl border border-white/5 rounded-2xl md:rounded-[2rem] p-2 md:p-4 shadow-2xl ring-1 ring-white/5">
             {playingSeason !== null && playingEpisode !== null ? (
-              <MemoizedVideoPlayer
+               <MemoizedVideoPlayer
                 tvId={tvId}
                 season={playingSeason}
                 episode={playingEpisode}
                 title={tv.name}
+                gdriveUrl={location.state?.customMovie?.gdrive_url}
                 key={`${tvId}-${playingSeason}-${playingEpisode}`}
               />
             ) : (
