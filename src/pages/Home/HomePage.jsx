@@ -6,6 +6,7 @@ import TrendingRow from './TrendingRow';
 import ContinueWatchingRow from './ContinueWatchingRow';
 import PersonalizedRow from './PersonalizedRow';
 import CustomMoviesRow from './CustomMoviesRow';
+import AdBanner from './AdBanner';
 import SEO from './SEO';
 
 const SectionDivider = ({ label }) => (
@@ -52,6 +53,7 @@ export default function HomePage() {
       />
       <HeroBanner />
       <div className="px-4 sm:px-8">
+        <AdBanner placement="home_top" />
         <CustomMoviesRow />
       </div>
 

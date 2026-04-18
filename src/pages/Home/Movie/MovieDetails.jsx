@@ -11,6 +11,7 @@ import VideoPlayer from "./VideoPlayer";
 import SEO from "../SEO";
 import ContentCard from "../ContentCard";
 import CastRow from "../reused/CastRow";
+import AdBanner from "../AdBanner";
 import AuthModal from "../../../components/AuthModal";
 import { useWatchlist } from "../../../context/WatchlistContext";
 
@@ -364,6 +365,9 @@ const MovieDetails = ({ movieId: movieIdProp }) => {
               gdriveUrl={location.state?.customMovie?.gdrive_url}
             />
           </div>
+
+          {/* Ad Placement Below Player */}
+          <AdBanner placement="player_bottom" />
         </div>
 
         {/* Info Banner */}

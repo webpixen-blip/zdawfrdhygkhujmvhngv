@@ -19,6 +19,9 @@ function CustomMoviesRow() {
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setMovies(data);
       setLoading(false);
+    }, (error) => {
+      console.error("Firestore error:", error);
+      setLoading(false);
     });
     return () => unsubscribe();
   }, []);

@@ -15,7 +15,9 @@ function MobileNav({ activePage, onNavigate, user, onLogout, onOpenAuthModal, se
   ];
 
   const genreType = activePage === 'series' ? 'tv' : 'movie';
-  const genres = [...GENRES[genreType], ...SPECIAL_CATEGORIES[genreType]].sort((a, b) => a.name.localeCompare(b.name));
+  const genresArr = GENRES[genreType] || [];
+  const specialArr = SPECIAL_CATEGORIES[genreType] || [];
+  const genres = [...genresArr, ...specialArr].sort((a, b) => (a.name || "").localeCompare(b.name || ""));
 
   return (
     <>

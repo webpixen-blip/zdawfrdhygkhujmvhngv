@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { db, auth } from '../../../firebase';
-import { collection, addDoc, getDoc, doc } from 'firebase/firestore';
+import { collection, addDoc, getDoc, doc, setDoc, deleteDoc, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
-import { FaPlus, FaGoogleDrive, FaSearch, FaArrowLeft, FaCheck } from 'react-icons/fa';
+import { FaPlus, FaGoogleDrive, FaSearch, FaArrowLeft, FaCheck, FaBullhorn, FaLayerGroup, FaTrashAlt, FaToggleOn, FaToggleOff } from 'react-icons/fa';
 import { motion, AnimatePresence } from 'framer-motion';
 import SEO from '../SEO';
 
@@ -27,6 +27,15 @@ function AdminPanel() {
   const [movieData, setMovieData] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState(null); // 'success' or 'error'
+  
+  // Tab State
+  const [activeTab, setActiveTab] = useState('content'); // 'content' or 'ads'
+  
+  // Ads State
+  const [ads, setAds] = useState([]);
+  const [globalAdsEnabled, setGlobalAdsEnabled] = useState(true);
+  const [adForm, setAdForm] = useState({ title: '', imageUrl: '', targetUrl: '', placement: 'home_top' });
+  const [isAdSaving, setIsAdSaving] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -48,6 +57,75 @@ function AdminPanel() {
     });
     return () => unsubscribe();
   }, []);
+
+  // Sync Ads and Settings
+  useEffect(() => {
+    if (!isAdmin) return;
+
+    // Listen to Site Settings
+    const settingsRef = doc(db, 'site_settings', 'ads_config');
+    const unsubscribeSettings = onSnapshot(settingsRef, (docSnap) => {
+      if (docSnap.exists()) {
+        setGlobalAdsEnabled(docSnap.data().enabled ?? true);
+      }
+    });
+
+    // Listen to Ads
+    const adsRef = collection(db, 'internal_ads');
+    const q = query(adsRef, orderBy('createdAt', 'desc'));
+    const unsubscribeAds = onSnapshot(q, (snapshot) => {
+      setAds(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    });
+
+    return () => {
+      unsubscribeSettings();
+      unsubscribeAds();
+    };
+  }, [isAdmin]);
+
+  const toggleGlobalAds = async () => {
+    try {
+      await setDoc(doc(db, 'site_settings', 'ads_config'), { enabled: !globalAdsEnabled });
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const syncAdVisibility = async (adId, status) => {
+    try {
+      await setDoc(doc(db, 'internal_ads', adId), { isActive: !status }, { merge: true });
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const deleteAd = async (adId) => {
+    if (!window.confirm('Delete this ad?')) return;
+    try {
+      await deleteDoc(doc(db, 'internal_ads', adId));
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleAdSubmit = async (e) => {
+    e.preventDefault();
+    setIsAdSaving(true);
+    try {
+      await addDoc(collection(db, 'internal_ads'), {
+        ...adForm,
+        isActive: true,
+        createdAt: new Date().toISOString()
+      });
+      setAdForm({ title: '', imageUrl: '', targetUrl: '', placement: 'home_top' });
+      alert('Ad added successfully!');
+    } catch (err) {
+      console.error(err);
+      alert('Failed to add ad.');
+    } finally {
+      setIsAdSaving(false);
+    }
+  };
 
   const fetchTmdbInfo = async () => {
     if (!tmdbId) return;
@@ -129,168 +207,178 @@ function AdminPanel() {
       <SEO title="Admin Panel - WeFlix" description="Manage custom movies and TV series." />
       
       <div className="max-w-4xl mx-auto">
-        <div className="flex items-center justify-between mb-10">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-10">
           <div>
             <h1 className="text-3xl font-black tracking-tight text-white mb-1">
               Admin <span className="text-red-600">Panel</span>
             </h1>
-            <p className="text-gray-500 text-sm">Upload new movies via Google Drive links</p>
+            <p className="text-gray-500 text-sm">Control WeFlix content and services</p>
           </div>
-          <button 
-            onClick={() => navigate('/')}
-            className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/10 transition-colors"
-          >
-            <FaArrowLeft />
-          </button>
+          
+          <div className="flex items-center gap-3">
+            {/* Global Ads Toggle */}
+            <button 
+              onClick={toggleGlobalAds}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all border ${
+                globalAdsEnabled 
+                ? 'bg-green-600/10 border-green-500/20 text-green-500' 
+                : 'bg-red-600/10 border-red-500/20 text-red-500'
+              }`}
+            >
+              {globalAdsEnabled ? <FaToggleOn className="text-sm" /> : <FaToggleOff className="text-sm" />}
+              Ads: {globalAdsEnabled ? 'Enabled' : 'Disabled'}
+            </button>
+
+            <button 
+              onClick={() => navigate('/')}
+              className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/10 transition-colors"
+            >
+              <FaArrowLeft />
+            </button>
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          
-          {/* Left Column: Form */}
-          <div className="space-y-6">
-            <div className="bg-white/5 border border-white/10 rounded-3xl p-6 backdrop-blur-md shadow-xl">
-              <h2 className="text-lg font-bold mb-6 flex items-center gap-2">
-                <FaPlus className="text-red-500 text-sm" /> Add New Content
-              </h2>
+        {/* Tab Switcher */}
+        <div className="flex gap-4 border-b border-white/5 mb-8">
+          {[
+            { id: 'content', label: 'Content Manager', icon: FaLayerGroup },
+            { id: 'ads', label: 'Ads Manager', icon: FaBullhorn },
+          ].map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`pb-4 px-2 text-sm font-bold flex items-center gap-2 transition-all relative ${
+                activeTab === tab.id ? 'text-white' : 'text-gray-500 hover:text-gray-300'
+              }`}
+            >
+              <tab.icon className="text-xs" />
+              {tab.label}
+              {activeTab === tab.id && (
+                <motion.div layoutId="admin-tab" className="absolute bottom-0 left-0 right-0 h-1 bg-red-600 rounded-full" />
+              )}
+            </button>
+          ))}
+        </div>
 
-              <form onSubmit={handleSave} className="space-y-4">
-                {/* Media Type Selection */}
-                <div className="flex gap-2 p-1 bg-black/40 rounded-xl">
-                  {['movie', 'tv'].map(type => (
-                    <button
-                      key={type}
-                      type="button"
-                      onClick={() => setMediaType(type)}
-                      className={`flex-1 py-2 text-xs font-bold uppercase tracking-wider rounded-lg transition-all ${
-                        mediaType === type ? 'bg-red-600 text-white shadow-lg' : 'text-gray-500 hover:text-gray-300'
-                      }`}
-                    >
-                      {type === 'movie' ? 'Movie' : 'TV Show'}
-                    </button>
-                  ))}
-                </div>
-
-                {/* TMDB ID & Fetch */}
-                <div className="space-y-1.5">
-                  <label className="text-[11px] font-bold text-gray-500 uppercase tracking-widest px-1">TMDB ID</label>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      placeholder="e.g. 550"
-                      value={tmdbId}
-                      onChange={e => setTmdbId(e.target.value)}
-                      className="flex-1 bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-red-500 transition-colors"
-                    />
-                    <button
-                      type="button"
-                      onClick={fetchTmdbInfo}
-                      disabled={isFetching || !tmdbId}
-                      className="px-4 bg-white/10 hover:bg-white/20 rounded-xl transition-all disabled:opacity-50"
-                    >
-                      {isFetching ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <FaSearch />}
-                    </button>
-                  </div>
-                </div>
-
-                {/* Google Drive Link */}
-                <div className="space-y-1.5">
-                  <label className="text-[11px] font-bold text-gray-500 uppercase tracking-widest px-1">Google Drive Link</label>
-                  <div className="relative">
-                    <FaGoogleDrive className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" />
-                    <input
-                      type="url"
-                      placeholder="Paste GDrive share link..."
-                      value={gdriveLink}
-                      onChange={e => setGdriveLink(e.target.value)}
-                      className="w-full bg-black/40 border border-white/10 rounded-xl pl-11 pr-4 py-3 text-sm focus:outline-none focus:border-red-500 transition-colors"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="pt-4">
-                  <button
-                    type="submit"
-                    disabled={isSaving || !movieData || !gdriveLink}
-                    className={`w-full py-4 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all ${
-                      movieData && gdriveLink 
-                        ? 'bg-red-600 hover:bg-red-500 shadow-lg shadow-red-900/20' 
-                        : 'bg-white/5 text-gray-600 cursor-not-allowed'
-                    }`}
-                  >
-                    {isSaving ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : 'Publish to WeFlix'}
-                  </button>
-                </div>
-              </form>
-
-              <AnimatePresence>
-                {saveStatus === 'success' && (
-                  <motion.div 
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0 }}
-                    className="mt-4 p-3 bg-green-500/10 border border-green-500/20 text-green-400 text-sm font-medium rounded-xl flex items-center justify-center gap-2"
-                  >
-                    <FaCheck /> Movie published successfully!
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          </div>
-
-          {/* Right Column: Preview */}
-          <div className="space-y-6">
-            <h2 className="text-[11px] font-bold text-gray-500 uppercase tracking-widest px-1">Preview Metadata</h2>
-            
-            {movieData ? (
-              <motion.div 
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="relative bg-white/5 border border-white/10 rounded-3xl overflow-hidden shadow-2xl group"
-              >
-                {/* Backdrop */}
-                <div className="aspect-video relative overflow-hidden">
-                  <img 
-                    src={`${CONFIG.IMAGE_BASE_URL}${movieData.backdrop_path}`} 
-                    alt="Backdrop" 
-                    className="w-full h-full object-cover"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#141820] via-transparent to-transparent" />
-                </div>
-
-                {/* Content */}
-                <div className="p-6 relative">
-                  <div className="flex gap-4">
-                    <img 
-                      src={`${CONFIG.IMAGE_BASE_URL}${movieData.poster_path}`} 
-                      alt="Poster" 
-                      className="w-24 aspect-[2/3] rounded-xl shadow-lg -mt-16 relative z-10 border-2 border-white/10"
-                    />
-                    <div className="flex-1">
-                      <h3 className="text-xl font-bold line-clamp-1">{movieData.title || movieData.name}</h3>
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className="text-[10px] bg-red-600/20 text-red-500 px-2 py-0.5 rounded font-bold uppercase">
-                          {mediaType}
-                        </span>
-                        <span className="text-xs text-gray-400">
-                          {(movieData.release_date || movieData.first_air_date)?.split('-')[0]}
-                        </span>
+        <AnimatePresence mode="wait">
+          {activeTab === 'content' ? (
+            <motion.div 
+              key="content-tab"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="grid grid-cols-1 lg:grid-cols-2 gap-8"
+            >
+              {/* Form & Preview (Original Code) */}
+              <div className="space-y-6">
+                <div className="bg-white/5 border border-white/10 rounded-3xl p-6 backdrop-blur-md shadow-xl">
+                  <h2 className="text-lg font-bold mb-6 flex items-center gap-2">
+                    <FaPlus className="text-red-500 text-sm" /> Add New Content
+                  </h2>
+                  <form onSubmit={handleSave} className="space-y-4">
+                    <div className="flex gap-2 p-1 bg-black/40 rounded-xl">
+                      {['movie', 'tv'].map(type => (
+                        <button key={type} type="button" onClick={() => setMediaType(type)} className={`flex-1 py-2 text-xs font-bold uppercase tracking-wider rounded-lg transition-all ${mediaType === type ? 'bg-red-600 text-white shadow-lg' : 'text-gray-500 hover:text-gray-300'}`}>{type === 'movie' ? 'Movie' : 'TV Show'}</button>
+                      ))}
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-bold text-gray-500 uppercase tracking-widest px-1">TMDB ID</label>
+                      <div className="flex gap-2">
+                        <input type="text" placeholder="e.g. 550" value={tmdbId} onChange={e => setTmdbId(e.target.value)} className="flex-1 bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-red-500 transition-colors" />
+                        <button type="button" onClick={fetchTmdbInfo} disabled={isFetching || !tmdbId} className="px-4 bg-white/10 hover:bg-white/20 rounded-xl transition-all disabled:opacity-50">{isFetching ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <FaSearch />}</button>
                       </div>
                     </div>
-                  </div>
-                  <p className="text-sm text-gray-400 mt-4 line-clamp-4 italic">
-                    "{movieData.overview}"
-                  </p>
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-bold text-gray-500 uppercase tracking-widest px-1">Google Drive Link</label>
+                      <div className="relative"><FaGoogleDrive className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" /><input type="url" placeholder="Paste GDrive share link..." value={gdriveLink} onChange={e => setGdriveLink(e.target.value)} className="w-full bg-black/40 border border-white/10 rounded-xl pl-11 pr-4 py-3 text-sm focus:outline-none focus:border-red-500 transition-colors" required /></div>
+                    </div>
+                    <div className="pt-4"><button type="submit" disabled={isSaving || !movieData || !gdriveLink} className={`w-full py-4 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all ${movieData && gdriveLink ? 'bg-red-600 hover:bg-red-500 shadow-lg shadow-red-900/20' : 'bg-white/5 text-gray-600 cursor-not-allowed'}`}>{isSaving ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : 'Publish to WeFlix'}</button></div>
+                  </form>
+                  <AnimatePresence>{saveStatus === 'success' && (<motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="mt-4 p-3 bg-green-500/10 border border-green-500/20 text-green-400 text-sm font-medium rounded-xl flex items-center justify-center gap-2"><FaCheck /> Movie published successfully!</motion.div>)}</AnimatePresence>
                 </div>
-              </motion.div>
-            ) : (
-              <div className="h-64 border-2 border-dashed border-white/5 rounded-3xl flex flex-col items-center justify-center text-gray-600">
-                <FaSearch className="text-3xl mb-3 opacity-20" />
-                <p className="text-sm font-medium">Enter TMDB ID and search to preview</p>
               </div>
-            )}
-          </div>
-        </div>
+              <div className="space-y-6">
+                <h2 className="text-[11px] font-bold text-gray-500 uppercase tracking-widest px-1">Preview Metadata</h2>
+                {movieData ? (
+                  <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="relative bg-white/5 border border-white/10 rounded-3xl overflow-hidden shadow-2xl group"><div className="aspect-video relative overflow-hidden"><img src={`${CONFIG.IMAGE_BASE_URL}${movieData.backdrop_path}`} alt="Backdrop" className="w-full h-full object-cover" /><div className="absolute inset-0 bg-gradient-to-t from-[#141820] via-transparent to-transparent" /></div><div className="p-6 relative"><div className="flex gap-4"><img src={`${CONFIG.IMAGE_BASE_URL}${movieData.poster_path}`} alt="Poster" className="w-24 aspect-[2/3] rounded-xl shadow-lg -mt-16 relative z-10 border-2 border-white/10" /><div className="flex-1"><h3 className="text-xl font-bold line-clamp-1">{movieData.title || movieData.name}</h3><div className="flex items-center gap-2 mt-1"><span className="text-[10px] bg-red-600/20 text-red-500 px-2 py-0.5 rounded font-bold uppercase">{mediaType}</span><span className="text-xs text-gray-400">{(movieData.release_date || movieData.first_air_date)?.split('-')[0]}</span></div></div></div><p className="text-sm text-gray-400 mt-4 line-clamp-4 italic">"{movieData.overview}"</p></div></motion.div>
+                ) : (
+                  <div className="h-64 border-2 border-dashed border-white/5 rounded-3xl flex flex-col items-center justify-center text-gray-600"><FaSearch className="text-3xl mb-3 opacity-20" /><p className="text-sm font-medium">Enter TMDB ID and search to preview</p></div>
+                )}
+              </div>
+            </motion.div>
+          ) : (
+            <motion.div 
+              key="ads-tab"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="grid grid-cols-1 lg:grid-cols-2 gap-8"
+            >
+              {/* Ad Creation Form */}
+              <div className="space-y-6">
+                <div className="bg-white/5 border border-white/10 rounded-3xl p-6 backdrop-blur-md shadow-xl">
+                  <h2 className="text-lg font-bold mb-6 flex items-center gap-2">
+                    <FaBullhorn className="text-red-500 text-sm" /> Create New Ad
+                  </h2>
+                  <form onSubmit={handleAdSubmit} className="space-y-4">
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-bold text-gray-500 uppercase tracking-widest px-1">Ad Title</label>
+                      <input type="text" placeholder="e.g. Summer Promo" value={adForm.title} onChange={e => setAdForm({...adForm, title: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-red-500 transition-colors" required />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-bold text-gray-500 uppercase tracking-widest px-1">Banner Image URL</label>
+                      <input type="url" placeholder="https://..." value={adForm.imageUrl} onChange={e => setAdForm({...adForm, imageUrl: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-red-500 transition-colors" required />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-bold text-gray-500 uppercase tracking-widest px-1">Target URL (Link)</label>
+                      <input type="url" placeholder="https://..." value={adForm.targetUrl} onChange={e => setAdForm({...adForm, targetUrl: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-red-500 transition-colors" required />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-bold text-gray-500 uppercase tracking-widest px-1">Placement</label>
+                      <select value={adForm.placement} onChange={e => setAdForm({...adForm, placement: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-red-500 transition-colors appearance-none">
+                        <option value="home_top">Home Top Banner</option>
+                        <option value="player_bottom">Below Video Player</option>
+                      </select>
+                    </div>
+                    <div className="pt-4">
+                      <button type="submit" disabled={isAdSaving} className="w-full py-4 bg-red-600 hover:bg-red-500 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-red-900/20 disabled:opacity-50">
+                        {isAdSaving ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : 'Save Ad'}
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+
+              {/* Active Ads List */}
+              <div className="space-y-4">
+                <h2 className="text-[11px] font-bold text-gray-500 uppercase tracking-widest px-1">Manage Ads ({ads.length})</h2>
+                {ads.length === 0 ? (
+                  <div className="h-32 border-2 border-dashed border-white/5 rounded-3xl flex items-center justify-center text-gray-600 text-sm">No ads created yet</div>
+                ) : (
+                  <div className="space-y-3">
+                    {ads.map(ad => (
+                      <div key={ad.id} className="bg-white/5 border border-white/10 rounded-2xl p-4 flex items-center gap-4">
+                        <img src={ad.imageUrl} alt="" className="w-16 h-10 object-cover rounded-md bg-black" />
+                        <div className="flex-1 min-w-0">
+                          <h4 className="text-sm font-bold truncate">{ad.title}</h4>
+                          <p className="text-[10px] text-gray-500 uppercase tracking-wider">{ad.placement.replace('_', ' ')}</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button onClick={() => syncAdVisibility(ad.id, ad.isActive)} className={`p-2 rounded-lg transition-colors ${ad.isActive ? 'text-green-500 bg-green-500/10' : 'text-gray-500 bg-white/5'}`} title="Toggle Visibility">
+                            {ad.isActive ? <FaToggleOn className="text-lg" /> : <FaToggleOff className="text-lg" />}
+                          </button>
+                          <button onClick={() => deleteAd(ad.id)} className="p-2 text-gray-500 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-colors">
+                            <FaTrashAlt />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </motion.div>
   );
