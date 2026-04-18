@@ -22,7 +22,7 @@ function MobileNav({ activePage, onNavigate, user, onLogout, onOpenAuthModal, se
   return (
     <>
       {/* Bottom Bar */}
-      <nav className="fixed bottom-0 left-0 right-0 z-[60] bg-[#0a0c12]/90 backdrop-blur-2xl border-t border-white/10 shadow-[0_-10px_40px_rgba(0,0,0,0.6)] flex items-center justify-around px-2 pt-2 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] md:hidden">
+      <nav className="fixed bottom-0 left-0 right-0 z-[100] bg-[#0a0c12]/90 backdrop-blur-2xl border-t border-white/10 shadow-[0_-10px_40px_rgba(0,0,0,0.6)] flex items-center justify-around px-2 pt-2 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] md:hidden">
         {navItems.map(({ id, icon: Icon, label }) => {
           const isActive = activePage === id;
           return (

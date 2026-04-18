@@ -85,8 +85,11 @@ function ParentComponent() {
 
     const vv = window.visualViewport;
     const handleResize = () => {
-      if (vv && vv.height < window.innerHeight * 0.85) {
-        setKeyboardOpen(true);
+      if (vv) {
+        // More robust check: usually keyboard takes up > 25% of the screen.
+        // This avoids triggering on scroll when the address bar hides/shows.
+        const isKeyboard = vv.height < window.innerHeight * 0.75;
+        setKeyboardOpen(isKeyboard);
       }
     };
     if (vv) vv.addEventListener('resize', handleResize);
