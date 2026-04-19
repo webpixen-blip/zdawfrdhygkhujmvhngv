@@ -402,10 +402,12 @@ function AdminPanel() {
                         <div className="space-y-1.5">
                           <label className="text-[10px] font-bold text-gray-500 uppercase px-1">Poster Image URL</label>
                           <input type="url" placeholder="https://..." value={manualForm.posterUrl} onChange={e => setManualForm({...manualForm, posterUrl: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-red-500 transition-colors" />
+                          <p className="text-[10px] text-gray-600 px-1 italic">Hint: Use direct image links (e.g. from ImgBB or postimg.cc)</p>
                         </div>
                         <div className="space-y-1.5">
                           <label className="text-[10px] font-bold text-gray-500 uppercase px-1">Backdrop Image URL</label>
                           <input type="url" placeholder="https://..." value={manualForm.backdropUrl} onChange={e => setManualForm({...manualForm, backdropUrl: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-red-500 transition-colors" />
+                          <p className="text-[10px] text-gray-600 px-1 italic">Hint: This is the large background image.</p>
                         </div>
                         <div className="space-y-1.5">
                           <label className="text-[10px] font-bold text-gray-500 uppercase px-1">Google Drive Link</label>

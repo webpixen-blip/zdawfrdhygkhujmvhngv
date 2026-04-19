@@ -276,17 +276,19 @@ const MovieDetails = ({ movieId: movieIdProp }) => {
       {/* ── HERO SECTION ── */}
       <div className="relative w-full min-h-[70vh] flex flex-col justify-end pt-32 pb-20">
         {/* Backdrop Image */}
-        <div className="absolute inset-0 z-0 select-none overflow-hidden">
+        <div className="absolute inset-0 z-0 select-none overflow-hidden bg-[#07080a]">
+          {/* Base Fallback Gradient (Always behind image) */}
+          <div className="absolute inset-0 bg-[#111319] bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-gray-800/40 to-[#07080a]" />
+          
           {movie.backdrop_path ? (
             <img
               src={getCompleteImageUrl(movie.backdrop_path)}
               alt=""
-              className="w-full h-full object-cover object-top"
+              className="w-full h-full object-cover object-top transition-opacity duration-1000"
               style={{ filter: "brightness(0.6) contrast(1.1) saturate(1.1)", transform: "scale(1.02)" }}
+              onError={(e) => { e.target.style.opacity = '0'; }}
             />
-          ) : (
-            <div className="w-full h-full bg-[#111319] bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-gray-800 to-[#111319]" />
-          )}
+          ) : null}
           {/* Gradients for text legibility */}
           <div className="absolute inset-0 bg-gradient-to-t from-[#07080a] via-[#07080a]/60 to-transparent" />
           <div className="absolute inset-0 bg-gradient-to-r from-[#07080a]/90 via-[#07080a]/50 to-transparent" />
@@ -321,11 +323,12 @@ const MovieDetails = ({ movieId: movieIdProp }) => {
           <div className="flex-1 max-w-3xl pb-2">
             {/* Mobile Poster (Visible only on mobile) */}
             {movie.poster_path && (
-              <div className="md:hidden w-32 aspect-[2/3] rounded-xl overflow-hidden shadow-2xl border border-white/10 mb-6">
+              <div className="md:hidden w-32 aspect-[2/3] rounded-xl overflow-hidden shadow-2xl border border-white/10 mb-6 bg-white/5">
                 <img 
                   src={getCompleteImageUrl(movie.poster_path, 'w342')} 
                   alt="" 
                   className="w-full h-full object-cover"
+                  onError={(e) => { e.target.style.display = 'none'; }}
                 />
               </div>
             )}
@@ -336,7 +339,7 @@ const MovieDetails = ({ movieId: movieIdProp }) => {
               </p>
             )}
 
-            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black text-white tracking-tight leading-[1.05] mb-4 drop-shadow-2xl font-sans">
+            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black text-white tracking-tight leading-[1.05] mb-4 drop-shadow-2xl font-sans break-words overflow-wrap-anywhere">
               {movie.title}
             </h1>
 
@@ -373,7 +376,7 @@ const MovieDetails = ({ movieId: movieIdProp }) => {
 
             {overview && (
               <div className="relative">
-                <p className="text-gray-300/90 leading-relaxed md:text-lg drop-shadow-md max-w-2xl">
+                <p className="text-gray-300/90 leading-relaxed md:text-lg drop-shadow-md max-w-2xl break-words">
                   {truncated}
                 </p>
                 {overview.length > 280 && (

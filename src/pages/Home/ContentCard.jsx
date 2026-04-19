@@ -221,7 +221,7 @@ const ContentCard = memo(({
 
         {/* Info below poster */}
         <div className="px-2.5 pt-2 pb-2.5 shrink-0 bg-[#0d1117] relative z-20">
-          <p className="text-white text-[13px] font-semibold leading-tight line-clamp-1">{title}</p>
+          <p className="text-white text-[13px] font-semibold leading-tight line-clamp-1 break-words">{title}</p>
           {(year || mediaType) && (
             <p className="text-gray-500 text-[11px] mt-0.5">
               {year}{year && mediaType && ' • '}{mediaType === 'tv' ? 'TV Show' : mediaType === 'movie' ? 'Movie' : ''}

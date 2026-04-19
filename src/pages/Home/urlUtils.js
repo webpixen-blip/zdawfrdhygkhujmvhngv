@@ -46,6 +46,9 @@ export function getIdFromDetailSlug(slug = '') {
  */
 export function getCompleteImageUrl(path, size = 'original') {
   if (!path) return '';
-  if (path.startsWith('http')) return path;
-  return `https://image.tmdb.org/t/p/${size}${path.startsWith('/') ? '' : '/'}${path}`;
+  const trimmed = String(path).trim();
+  if (trimmed.startsWith('http') || trimmed.startsWith('//')) return trimmed;
+  // Ensure relative TMDB path starts with /
+  const cleanPath = trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
+  return `https://image.tmdb.org/t/p/${size}${cleanPath}`;
 }
