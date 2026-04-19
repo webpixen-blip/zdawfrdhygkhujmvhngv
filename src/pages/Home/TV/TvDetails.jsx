@@ -10,7 +10,7 @@ import { useParams, useNavigate, useLocation, useSearchParams } from "react-rout
 import PropTypes from "prop-types";
 import { motion, AnimatePresence } from "framer-motion";
 import { fetchSeriesDetails, fetchAllEpisodes, fetchRelatedSeries } from "../Fetcher";
-import { getIdFromDetailSlug, toDetailPath } from "../urlUtils";
+import { getIdFromDetailSlug, toDetailPath, getCompleteImageUrl } from "../urlUtils";
 import { saveToContinueWatching } from "../../../utils/continueWatching";
 import { FaRedo, FaStar, FaArrowLeft, FaTv, FaStepBackward, FaStepForward, FaInfoCircle, FaBookmark } from "react-icons/fa";
 import { BiCalendar, BiGlobe, BiTv, BiChevronLeft, BiChevronRight, BiSearch } from "react-icons/bi";
@@ -505,9 +505,9 @@ const TvDetails = ({ tvId: tvIdProp }) => {
         }
         image={
           tv.backdrop_path
-            ? `https://image.tmdb.org/t/p/w1280${tv.backdrop_path}`
+            ? getCompleteImageUrl(tv.backdrop_path, 'w1280')
             : tv.poster_path
-              ? `https://image.tmdb.org/t/p/w780${tv.poster_path}`
+              ? getCompleteImageUrl(tv.poster_path, 'w780')
               : undefined
         }
         type="video.episode"
@@ -516,7 +516,7 @@ const TvDetails = ({ tvId: tvIdProp }) => {
           '@type': 'TVSeries',
           name: tv.name,
           description: tv.overview,
-          image: tv.poster_path ? `https://image.tmdb.org/t/p/w780${tv.poster_path}` : undefined,
+          image: tv.poster_path ? getCompleteImageUrl(tv.poster_path, 'w780') : undefined,
           startDate: tv.first_air_date,
           numberOfSeasons: allSeasons.length || undefined,
           ...(tv.vote_average > 0 && {
@@ -537,7 +537,7 @@ const TvDetails = ({ tvId: tvIdProp }) => {
         <div className="absolute inset-0 z-0 select-none overflow-hidden">
           {tv.backdrop_path ? (
             <img
-              src={`${BACKDROP}${tv.backdrop_path}`}
+              src={getCompleteImageUrl(tv.backdrop_path)}
               alt=""
               className="w-full h-full object-cover object-top"
               style={{ filter: "brightness(0.6) contrast(1.1) saturate(1.1)", transform: "scale(1.02)" }}
@@ -568,7 +568,7 @@ const TvDetails = ({ tvId: tvIdProp }) => {
           {tv.poster_path && (
             <div className="hidden md:block shrink-0 z-10">
               <img
-                src={`${POSTER}${tv.poster_path}`}
+                src={getCompleteImageUrl(tv.poster_path, 'w500')}
                 alt={tv.name}
                 className="w-48 lg:w-64 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.6)] ring-1 ring-white/10 group-hover:scale-105 transition-transform duration-700"
               />
@@ -577,6 +577,17 @@ const TvDetails = ({ tvId: tvIdProp }) => {
 
           {/* Info */}
           <div className="flex-1 max-w-3xl pb-2">
+            {/* Mobile Poster (Visible only on mobile) */}
+            {tv.poster_path && (
+              <div className="md:hidden w-32 aspect-[2/3] rounded-xl overflow-hidden shadow-2xl border border-white/10 mb-6">
+                <img 
+                  src={getCompleteImageUrl(tv.poster_path, 'w342')} 
+                  alt="" 
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            )}
+
             {tv.tagline && (
               <p className="text-red-400 font-semibold tracking-wider text-xs md:text-sm uppercase mb-3 drop-shadow-md">
                 {tv.tagline}
@@ -900,10 +911,10 @@ const TvDetails = ({ tvId: tvIdProp }) => {
               {related.map((item) => (
                 <div key={item.id} className="shrink-0 transition-transform duration-300 hover:-translate-y-2">
                   <ContentCard
-                    title={item.name || item.title}
-                    poster={item.poster_path ? `https://image.tmdb.org/t/p/w342${item.poster_path}` : '/placeholder.svg'}
+                    title={item.title || item.name}
+                    poster={getCompleteImageUrl(item.poster_path, 'w342')}
                     rating={item.vote_average}
-                    releaseDate={item.first_air_date}
+                    releaseDate={item.release_date || item.first_air_date}
                     onClick={() => {
                       if (suppressRelatedClickRef.current) return;
                       handleRelatedSelect(item);

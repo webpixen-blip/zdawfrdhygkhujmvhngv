@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { BiChevronLeft, BiChevronRight } from 'react-icons/bi';
 import { FiArrowRight } from 'react-icons/fi';
 import ContentCard from './ContentCard';
+import { getCompleteImageUrl } from './urlUtils';
 
 const API_KEY = import.meta.env.VITE_TMDB_API;
 const BASE_URL = import.meta.env.VITE_BASE_URL;
@@ -276,7 +277,7 @@ export default function TrendingRow({
               )}
               <ContentCard
                 title={item.title || item.name}
-                poster={item.poster_path ? `${POSTER}${item.poster_path}` : null}
+                poster={getCompleteImageUrl(item.poster_path, 'w500')}
                 rating={item.vote_average}
                 releaseDate={releaseDate.slice(0, 4)}
                 onClick={() => {

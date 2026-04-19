@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useWatchlist } from '../../context/WatchlistContext';
 import ContentCard from './ContentCard';
 import SEO from './SEO';
-import { toDetailPath } from './urlUtils';
+import { toDetailPath, getCompleteImageUrl } from './urlUtils';
 import { FaBookmark } from 'react-icons/fa';
 import { BiMoviePlay, BiTv } from 'react-icons/bi';
 
@@ -145,7 +145,7 @@ function WatchlistPage() {
               >
                 <ContentCard
                   title={item.title}
-                  poster={item.poster_path ? `${IMAGE_BASE_URL}${item.poster_path}` : '/placeholder.svg'}
+                  poster={getCompleteImageUrl(item.poster_path, 'w500')}
                   rating={item.vote_average}
                   releaseDate={item.release_date || item.addedAt}
                   onClick={() => {

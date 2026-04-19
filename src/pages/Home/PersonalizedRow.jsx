@@ -7,6 +7,7 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { auth, db } from '../../firebase';
 import ContentCard from './ContentCard';
 import { useWatchlist } from '../../context/WatchlistContext';
+import { getCompleteImageUrl } from './urlUtils';
 
 const API_KEY = import.meta.env.VITE_TMDB_API;
 const BASE_URL = import.meta.env.VITE_BASE_URL;
@@ -240,7 +241,7 @@ export default function PersonalizedRow({ onSelect }) {
           <div key={`${item.media_type}-${item.id}`} className="shrink-0" style={{ width: 160 }}>
             <ContentCard
               title={item.title || item.name}
-              poster={item.poster_path ? `${POSTER}${item.poster_path}` : null}
+              poster={getCompleteImageUrl(item.poster_path, 'w500')}
               rating={item.vote_average}
               releaseDate={(item.release_date || item.first_air_date || '').slice(0, 4)}
               onClick={() => {

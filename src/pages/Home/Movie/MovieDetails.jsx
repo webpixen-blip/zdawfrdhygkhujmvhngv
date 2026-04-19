@@ -2,7 +2,7 @@ import React, { useEffect, useLayoutEffect, useState, useCallback, memo, useRef 
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import PropTypes from "prop-types";
 import { fetchMovieDetails, fetchRelatedMovies } from "../Fetcher";
-import { getIdFromDetailSlug, toDetailPath } from "../urlUtils";
+import { getIdFromDetailSlug, toDetailPath, getCompleteImageUrl } from "../urlUtils";
 import { saveToContinueWatching } from "../../../utils/continueWatching";
 import { FaRedo, FaStar, FaArrowLeft, FaInfoCircle, FaBookmark } from "react-icons/fa";
 import { BiCalendar, BiTime, BiGlobe } from "react-icons/bi";
@@ -248,9 +248,9 @@ const MovieDetails = ({ movieId: movieIdProp }) => {
         }
         image={
           movie.backdrop_path
-            ? `https://image.tmdb.org/t/p/w1280${movie.backdrop_path}`
+            ? getCompleteImageUrl(movie.backdrop_path, 'w1280')
             : movie.poster_path
-            ? `https://image.tmdb.org/t/p/w780${movie.poster_path}`
+            ? getCompleteImageUrl(movie.poster_path, 'w780')
             : undefined
         }
         type="video.movie"
@@ -259,7 +259,7 @@ const MovieDetails = ({ movieId: movieIdProp }) => {
           '@type': 'Movie',
           name: movie.title,
           description: movie.overview,
-          image: movie.poster_path ? `https://image.tmdb.org/t/p/w780${movie.poster_path}` : undefined,
+          image: movie.poster_path ? getCompleteImageUrl(movie.poster_path, 'w780') : undefined,
           dateCreated: movie.release_date,
           ...(movie.vote_average > 0 && {
             aggregateRating: {
@@ -279,7 +279,7 @@ const MovieDetails = ({ movieId: movieIdProp }) => {
         <div className="absolute inset-0 z-0 select-none overflow-hidden">
           {movie.backdrop_path ? (
             <img
-              src={`${BACKDROP}${movie.backdrop_path}`}
+              src={getCompleteImageUrl(movie.backdrop_path)}
               alt=""
               className="w-full h-full object-cover object-top"
               style={{ filter: "brightness(0.6) contrast(1.1) saturate(1.1)", transform: "scale(1.02)" }}
@@ -310,7 +310,7 @@ const MovieDetails = ({ movieId: movieIdProp }) => {
           {movie.poster_path && (
             <div className="hidden md:block shrink-0 z-10">
               <img
-                src={`${POSTER}${movie.poster_path}`}
+                src={getCompleteImageUrl(movie.poster_path, 'w500')}
                 alt={movie.title}
                 className="w-48 lg:w-64 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.6)] ring-1 ring-white/10 group-hover:scale-105 transition-transform duration-700"
               />
@@ -319,6 +319,17 @@ const MovieDetails = ({ movieId: movieIdProp }) => {
 
           {/* Info */}
           <div className="flex-1 max-w-3xl pb-2">
+            {/* Mobile Poster (Visible only on mobile) */}
+            {movie.poster_path && (
+              <div className="md:hidden w-32 aspect-[2/3] rounded-xl overflow-hidden shadow-2xl border border-white/10 mb-6">
+                <img 
+                  src={getCompleteImageUrl(movie.poster_path, 'w342')} 
+                  alt="" 
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            )}
+
             {movie.tagline && (
               <p className="text-red-400 font-semibold tracking-wider text-xs md:text-sm uppercase mb-3 drop-shadow-md">
                 {movie.tagline}
@@ -443,7 +454,7 @@ const MovieDetails = ({ movieId: movieIdProp }) => {
                 <div key={item.id} className="shrink-0 transition-transform duration-300 hover:-translate-y-2">
                   <ContentCard
                     title={item.title || item.name}
-                    poster={item.poster_path ? `${POSTER}${item.poster_path}` : '/placeholder.svg'}
+                    poster={getCompleteImageUrl(item.poster_path, 'w342')}
                     rating={item.vote_average}
                     releaseDate={item.release_date}
                     onClick={() => {

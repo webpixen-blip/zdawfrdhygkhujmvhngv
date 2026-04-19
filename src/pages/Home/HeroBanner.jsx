@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { toDetailPath } from './urlUtils';
+import { toDetailPath, getCompleteImageUrl } from './urlUtils';
 import { FaPlay, FaInfoCircle, FaStar } from 'react-icons/fa';
 import { BiCalendar } from 'react-icons/bi';
 
@@ -129,7 +129,7 @@ export default function HeroBanner() {
       {/* ── Backdrop ─────────────────────────── */}
       <div className={`absolute inset-0 transition-opacity duration-500 ${fade ? 'opacity-100' : 'opacity-0'}`}>
         <img
-          src={`${BACKDROP}${item.backdrop_path}`}
+          src={getCompleteImageUrl(item.backdrop_path, 'w1280')}
           alt={title}
           loading="lazy"
           className="w-full h-full object-cover object-center"
@@ -251,7 +251,7 @@ export default function HeroBanner() {
                   : 'ring-white/10 opacity-45 hover:opacity-75'
               }`}
             >
-              <img src={`${BACKDROP_THUMB}${it.backdrop_path}`} loading="lazy" alt="" className="w-full h-full object-cover" />
+              <img src={getCompleteImageUrl(it.backdrop_path, 'w300')} loading="lazy" alt="" className="w-full h-full object-cover" />
             </button>
           ))}
         </div>

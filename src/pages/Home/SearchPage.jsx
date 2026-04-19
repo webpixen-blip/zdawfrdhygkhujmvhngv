@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
-import { toDetailPath } from './urlUtils';
+import { toDetailPath, getCompleteImageUrl } from './urlUtils';
 import {
   FaSearch, FaTimes, FaStar, FaFilter, FaChevronDown,
 } from 'react-icons/fa';
@@ -643,7 +643,7 @@ function SearchPage() {
               >
                 <ContentCard
                   title={item.title || item.name}
-                  poster={item.poster_path ? `${CONFIG.IMAGE_BASE_URL}${item.poster_path}` : ''}
+                  poster={getCompleteImageUrl(item.poster_path, 'w500')}
                   rating={item.vote_average}
                   releaseDate={item.release_date || item.first_air_date}
                   onClick={() => {

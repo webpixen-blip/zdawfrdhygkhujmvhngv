@@ -4,7 +4,7 @@ import { db } from '../../firebase';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import ContentCard from './ContentCard';
-import { toDetailPath } from './urlUtils';
+import { toDetailPath, getCompleteImageUrl } from './urlUtils';
 import { FaPlay } from 'react-icons/fa';
 
 function CustomMoviesRow() {
@@ -56,7 +56,7 @@ function CustomMoviesRow() {
             >
               <ContentCard
                 title={item.title}
-                poster={`https://image.tmdb.org/t/p/w500${item.poster_path}`}
+                poster={getCompleteImageUrl(item.poster_path, 'w500')}
                 rating={item.rating}
                 releaseDate={item.release_date}
                 mediaId={item.id}

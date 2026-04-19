@@ -39,3 +39,13 @@ export function getIdFromDetailSlug(slug = '') {
 
   return null;
 }
+
+/**
+ * Build a complete image URL from a path.
+ * Handles both TMDB relative paths and full external URLs.
+ */
+export function getCompleteImageUrl(path, size = 'original') {
+  if (!path) return '';
+  if (path.startsWith('http')) return path;
+  return `https://image.tmdb.org/t/p/${size}${path.startsWith('/') ? '' : '/'}${path}`;
+}

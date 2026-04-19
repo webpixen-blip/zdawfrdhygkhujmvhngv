@@ -4,6 +4,7 @@ import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestor
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth, db } from '../../firebase';
 import ContentCard from './ContentCard';
+import { getCompleteImageUrl } from './urlUtils';
 
 const POSTER = 'https://image.tmdb.org/t/p/w500';
 
@@ -152,7 +153,7 @@ export default function ContinueWatchingRow({ onSelect, accent }) {
             >
               <ContentCard
                 title={item.title}
-                poster={item.poster_path ? `${POSTER}${item.poster_path}` : null}
+                poster={getCompleteImageUrl(item.poster_path, 'w500')}
                 rating={item.vote_average}
                 releaseDate={releaseDate.slice(0, 4)}
                 onClick={() => {

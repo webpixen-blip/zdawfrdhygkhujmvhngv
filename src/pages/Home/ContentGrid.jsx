@@ -3,6 +3,7 @@ import PropTypes from 'prop-types';
 import { motion } from 'framer-motion';
 import ContentCard from './ContentCard';
 import { fetchContentByGenre, fetchTrending } from './Fetcher';
+import { getCompleteImageUrl } from './urlUtils';
 import { SPECIAL_PARAMS } from './tmdb';
 import { BiWifi } from 'react-icons/bi';
 
@@ -172,9 +173,7 @@ const ContentGrid = ({ genreId, type, onSelect, sortBy = 'popularity.desc', onRe
   const renderContent = () => {
     return items.map((item, index) => {
       const isLastElement = index === items.length - 1;
-      const posterPath = item.poster_path
-        ? `${POSTER_BASE_URL}${item.poster_path}`
-        : '/placeholder.svg';
+      const posterPath = getCompleteImageUrl(item.poster_path, 'w500') || '/placeholder.svg';
 
       return (
         <motion.div
