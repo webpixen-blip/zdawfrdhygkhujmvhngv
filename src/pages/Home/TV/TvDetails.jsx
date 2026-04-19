@@ -24,6 +24,8 @@ import AuthModal from "../../../components/AuthModal";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "../../../firebase";
 import { useWatchlist } from "../../../context/WatchlistContext";
+import { db } from "../../../firebase";
+import { collection, query, where, getDocs, limit } from "firebase/firestore";
 
 const MemoizedVideoPlayer = memo(VideoPlayer);
 
@@ -115,26 +117,62 @@ const TvDetails = ({ tvId: tvIdProp }) => {
     setError(null);
     setRetrying(true);
     try {
-      const [seriesData, seasonsData, relatedData] = await Promise.all([
-        fetchSeriesDetails(tvId),
-        fetchAllEpisodes(tvId),
-        fetchRelatedSeries(tvId),
-      ]);
+      // 1. Check Firestore for custom series first
+      const q = query(
+        collection(db, "custom_movies"),
+        where("tmdbId", "==", Number(tvId)),
+        limit(1)
+      );
+      const querySnapshot = await getDocs(q);
+
+      let seriesData = null;
+      let seasonsData = [];
+      let relatedData = [];
+
+      if (!querySnapshot.empty) {
+        const docData = querySnapshot.docs[0].data();
+        seriesData = {
+          ...docData,
+          id: docData.tmdbId,
+          name: docData.title,
+          vote_average: docData.rating || 0,
+          genres: docData.genres?.map((name, index) => ({ id: index, name })) || [],
+        };
+        // For custom series, we might not have full episode lists from TMDB, 
+        // but we want to show at least one "dummy" season/episode so player renders
+        seasonsData = [{
+          season_number: 1,
+          episodes: [{ episode_number: 1 }]
+        }];
+      } else {
+        // 2. Fallback to TMDB API
+        const [tmdbData, tmdbSeasons, tmdbRelated] = await Promise.all([
+          fetchSeriesDetails(tvId),
+          fetchAllEpisodes(tvId),
+          fetchRelatedSeries(tvId),
+        ]);
+        seriesData = tmdbData;
+        seasonsData = tmdbSeasons;
+        relatedData = tmdbRelated;
+      }
+
       setTv(seriesData);
       setRelated((relatedData ?? []).filter((item) => item?.id && item.id !== seriesData.id).slice(0, 18));
+      
       const filtered = (seasonsData ?? [])
-        .filter(s => s.season_number > 0)
+        .filter(s => s.season_number >= 0) // Allow Season 0 if it exists
         .sort((a, b) => a.season_number - b.season_number);
-      setAllSeasons(filtered);
+      
+      const mainSeasons = filtered.filter(s => s.season_number > 0);
+      setAllSeasons(mainSeasons.length > 0 ? mainSeasons : filtered);
 
-      if (filtered.length > 0) {
-        // Read URL params at fetch time so the correct season/episode is set as the
-        // initial state directly — prevents S1E1 flash before URL sync can override.
+      const finalSeasons = mainSeasons.length > 0 ? mainSeasons : filtered;
+
+      if (finalSeasons.length > 0) {
         const urlParams = new URLSearchParams(window.location.search);
         let urlSeason = getValidParamNumber(urlParams, 'season');
         let urlEpisode = getValidParamNumber(urlParams, 'episode');
 
-        // ++ Progress Tracking: Resume from exact episode if found in Continue Watching cache ++
         if (urlSeason === null && urlEpisode === null) {
           try {
             const cwCache = JSON.parse(localStorage.getItem('wf_cw_cache_items') || '[]');
@@ -143,12 +181,12 @@ const TvDetails = ({ tvId: tvIdProp }) => {
               urlSeason = cwMatch.season;
               urlEpisode = cwMatch.episode;
             }
-          } catch { /* ignore cache parse errors */ }
+          } catch { /* ignore */ }
         }
 
         const selectedSeason =
-          (urlSeason && filtered.find((s) => s.season_number === urlSeason))
-          ?? filtered[0];
+          (urlSeason && finalSeasons.find((s) => s.season_number === urlSeason))
+          ?? finalSeasons[0];
         const selectedEpisode =
           (urlEpisode && selectedSeason.episodes?.find((e) => e.episode_number === urlEpisode)?.episode_number)
           ?? selectedSeason.episodes?.find((e) => e.episode_number)?.episode_number
@@ -158,7 +196,8 @@ const TvDetails = ({ tvId: tvIdProp }) => {
         setPlayingSeason(selectedSeason.season_number);
         setPlayingEpisode(selectedEpisode);
       }
-    } catch {
+    } catch (err) {
+      console.error("Load error:", err);
       setError("Failed to load TV show details. Please try again.");
     } finally {
       setLoading(false);

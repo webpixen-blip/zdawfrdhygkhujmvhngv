@@ -14,6 +14,8 @@ import CastRow from "../reused/CastRow";
 import AdBanner from "../AdBanner";
 import AuthModal from "../../../components/AuthModal";
 import { useWatchlist } from "../../../context/WatchlistContext";
+import { db } from "../../../firebase";
+import { collection, query, where, getDocs, limit } from "firebase/firestore";
 
 const MemoizedVideoPlayer = memo(VideoPlayer);
 
@@ -65,13 +67,41 @@ const MovieDetails = ({ movieId: movieIdProp }) => {
     setError(null);
     setRetrying(true);
     try {
-      const [data, relatedData] = await Promise.all([
-        fetchMovieDetails(movieId),
-        fetchRelatedMovies(movieId),
-      ]);
+      // 1. Check Firestore for custom movie first
+      const q = query(
+        collection(db, "custom_movies"),
+        where("tmdbId", "==", Number(movieId)),
+        limit(1)
+      );
+      const querySnapshot = await getDocs(q);
+      
+      let data = null;
+      let relatedData = [];
+
+      if (!querySnapshot.empty) {
+        // Use custom movie from Firestore
+        const docData = querySnapshot.docs[0].data();
+        data = {
+          ...docData,
+          id: docData.tmdbId,
+          // Map fields if they differ slightly from TMDB structure
+          genres: docData.genres?.map((name, index) => ({ id: index, name })) || [],
+          vote_average: docData.rating || 0,
+        };
+      } else {
+        // 2. Fallback to TMDB API
+        const [tmdbData, tmdbRelated] = await Promise.all([
+          fetchMovieDetails(movieId),
+          fetchRelatedMovies(movieId),
+        ]);
+        data = tmdbData;
+        relatedData = tmdbRelated;
+      }
+
       setMovie(data);
       setRelated((relatedData ?? []).filter((item) => item?.id && item.id !== data.id).slice(0, 18));
-    } catch {
+    } catch (err) {
+      console.error("Load error:", err);
       setError("Failed to load movie. Please try again.");
     } finally {
       setLoading(false);
